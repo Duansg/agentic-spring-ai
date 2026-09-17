@@ -63,7 +63,10 @@ Spring AI Alibaba 作为 Spring AI 的实现之一，在代码规范方面直接
 
 ### 提交最新代码
 
-在编码完成之后，需要基于 pr 规范`[lint-pr-title.yml](.github/workflows/lint-pr-title.yml)`对提交信息进行 format & check，确保提交信息符合规范。
+提交信息和 PR 标题使用 `type(scope): description` 格式，`scope` 可省略。常用类型包括 `fix`、`feat`、`refactor`、`docs`、`chore`、`perf`、`infra`、`revert`、`release`、`test` 和 `style`。
+
+提交或更新 PR 时不运行 GitHub Actions 检查，也不自动发送欢迎消息或添加标签。审核通过并合并到 `main` 后，CI 通过 `push` 事件运行构建、测试、Lint、许可证和密钥检查；直接推送到 `main` 也会触发这些检查。审核要求由仓库分支保护或规则集管理。
+
 Commit 规范: git commit -m "类型(模块): 空格 符合规范的提交信息",例如 `feat(docs): contribute-zh 更新` 
 
 ### Merge 最新代码

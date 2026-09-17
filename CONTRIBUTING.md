@@ -65,7 +65,7 @@ To ensure code cleanliness, please remove any unused imports in your Java files.
 
 ### Commit the Latest Code
 
-After completing your coding, you need to format and verify your commit messages according to the PR specification in `[lint-pr-title.yml](.github/workflows/lint-pr-title.yml)` to ensure they comply with the guidelines.
+提交信息和 PR 标题使用 `type(scope): description` 格式，`scope` 可省略。PR 提交和更新不触发检查；合并到 `main` 后通过 `push` 事件运行 CI。详见[中文贡献指南](CONTRIBUTING-zh.md)。
 
 Commit format example:
 
