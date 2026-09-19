@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import reactor.core.publisher.Flux;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -35,12 +36,14 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
  */
 public class GraphResponse<E> implements Serializable {
 
+	private static final Map<String, Object> EMPTY_METADATA = Collections.emptyMap();
+
 	@JsonIgnore
 	CompletableFuture<E> output;
 
 	Object resultValue;
 
-	Map<String, Object> metadata;
+	Map<String, Object> metadata = EMPTY_METADATA;
 
 	/**
 	 * Lazy continuation of the graph execution. Executors emit a marker response
@@ -56,13 +59,13 @@ public class GraphResponse<E> implements Serializable {
 	public GraphResponse(){}
 
 	public GraphResponse(CompletableFuture<E> data, Object resultValue) {
-		this(data, resultValue, new HashMap<>());
+		this(data, resultValue, EMPTY_METADATA);
 	}
 
 	public GraphResponse(CompletableFuture<E> data, Object resultValue, Map<String, Object> metadata) {
 		this.output = data;
 		this.resultValue = resultValue;
-		this.metadata = new HashMap<>(metadata);
+		this.metadata = metadata.isEmpty() ? EMPTY_METADATA : new HashMap<>(metadata);
 	}
 
 	public static <E> GraphResponse<E> of(CompletableFuture<E> data) {
@@ -154,6 +157,9 @@ public class GraphResponse<E> implements Serializable {
 	 * @param value the metadata value
 	 */
 	public void addMetadata(String key, Object value) {
+		if (this.metadata.isEmpty()) {
+			this.metadata = new HashMap<>();
+		}
 		this.metadata.put(key, value);
 	}
 
@@ -207,7 +213,14 @@ public class GraphResponse<E> implements Serializable {
 	 * @return the previous value associated with the key, or null if no mapping existed
 	 */
 	public Object removeMetadata(String key) {
-		return this.metadata.remove(key);
+		if (this.metadata.isEmpty()) {
+			return null;
+		}
+		Object removed = this.metadata.remove(key);
+		if (this.metadata.isEmpty()) {
+			this.metadata = EMPTY_METADATA;
+		}
+		return removed;
 	}
 
 
