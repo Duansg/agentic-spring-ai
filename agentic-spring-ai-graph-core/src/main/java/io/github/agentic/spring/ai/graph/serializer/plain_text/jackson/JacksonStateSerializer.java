@@ -54,6 +54,9 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  */
 public abstract class JacksonStateSerializer extends PlainTextStateSerializer {
 
+	private static final TypeReference<Map<String, Object>> STATE_TYPE = new TypeReference<>() {
+	};
+
 	protected final ObjectMapper objectMapper;
 
 	protected TypeMapper typeMapper = new TypeMapper();
@@ -120,8 +123,15 @@ public abstract class JacksonStateSerializer extends PlainTextStateSerializer {
 	@Override
 	public final Map<String, Object> readData(ObjectInput in) throws IOException, ClassNotFoundException {
 		String json = Serializer.readUTF(in);
-		return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {
-		});
+		return objectMapper.readValue(json, STATE_TYPE);
+	}
+
+	@Override
+	public OverAllState cloneObject(OverAllState object) throws IOException, ClassNotFoundException {
+		Objects.requireNonNull(object, "object cannot be null");
+		// Keep the JSON deep-copy semantics without wrapping JSON in Java object streams.
+		byte[] json = objectMapper.writeValueAsBytes(normalizeForSerialization(object.data()));
+		return stateFactory().apply(objectMapper.readValue(json, STATE_TYPE));
 	}
 
 	/**
