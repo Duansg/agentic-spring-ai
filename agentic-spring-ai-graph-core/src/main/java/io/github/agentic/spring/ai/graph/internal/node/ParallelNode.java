@@ -533,27 +533,21 @@ public class ParallelNode extends Node {
 				for (Map.Entry<String, Object> entry : result.entrySet()) {
 					Object value = entry.getValue();
 
-					if (value instanceof GraphFlux) {
-						GraphFlux<?> graphFlux = (GraphFlux<?>) value;
+					if (value instanceof GraphFlux<?> graphFlux) {
 						// Use GraphFlux's own nodeId, or generate one if not set properly
 						String graphFluxNodeId = graphFlux.getNodeId() != null ? graphFlux.getNodeId()
 								: effectiveNodeId;
 
 						// Create new GraphFlux with correct nodeId if needed
 						if (!graphFluxNodeId.equals(graphFlux.getNodeId())) {
-							@SuppressWarnings("unchecked")
-							GraphFlux<Object> castedFlux = (GraphFlux<Object>) graphFlux;
-							@SuppressWarnings("unchecked")
-							GraphFlux<Object> newGraphFlux = GraphFlux.of(graphFluxNodeId, entry.getKey(),
-									castedFlux.getFlux(), castedFlux.getMapResult(), castedFlux.getChunkResult());
-							graphFlux = newGraphFlux;
+							graphFlux = copyGraphFlux(graphFlux, graphFluxNodeId, entry.getKey());
 						}
 
 						graphFluxList.add(graphFlux);
 						graphFluxNodeIds.add(graphFluxNodeId);
-					} else if (value instanceof Flux flux) {
+					} else if (value instanceof Flux<?> flux) {
 						// Traditional Flux - wrap it in GraphFlux for unified processing
-						GraphFlux<Object> graphFlux = GraphFlux.of(effectiveNodeId, entry.getKey(), flux, null, null);
+						GraphFlux<?> graphFlux = GraphFlux.of(effectiveNodeId, entry.getKey(), flux, null, null);
 						graphFluxList.add(graphFlux);
 					} else {
 						// Regular object - add to merged state
@@ -588,6 +582,11 @@ public class ParallelNode extends Node {
 			// Try to extract meaningful identifier from action
 			String actionClass = action.getClass().getSimpleName();
 			return String.format("%s_parallel_%d_%s", nodeId, index, actionClass);
+		}
+
+		private static <T> GraphFlux<T> copyGraphFlux(GraphFlux<T> graphFlux, String nodeId, String key) {
+			return GraphFlux.of(nodeId, key, graphFlux.getFlux(), graphFlux.getMapResult(),
+					graphFlux.getChunkResult());
 		}
 	}
 

@@ -51,18 +51,19 @@ public class GraphFlux<T> {
     /**
      * Result mapping function, used to convert the final result of streaming data into Map format
      */
-    private final Function<T,?> mapResult;
+    private final Function<T, ?> mapResult;
 
     /**
      * Chunk result function, used to process individual chunks of data
      */
-    private final Function<Object,String> chunkResult;
+    private final Function<T, String> chunkResult;
 
 
     /**
      * Private constructor, instances are created through static factory methods
      */
-    private GraphFlux(String nodeId, Flux<T> flux, String key, Function<T,?> mapResult, Function<Object, String> chunkResult) {
+    private GraphFlux(String nodeId, Flux<T> flux, String key, Function<T, ?> mapResult,
+            Function<T, String> chunkResult) {
         this.nodeId = nodeId;
         this.flux = flux;
         this.key = key;
@@ -79,11 +80,11 @@ public class GraphFlux<T> {
      * @return GraphFlux instance
      */
     public static <T> GraphFlux<T> of(String nodeId, Flux<T> flux) {
-        return new GraphFlux<>(nodeId, flux,null, null,null);
+        return new GraphFlux<>(nodeId, flux, null, null, null);
     }
 
     public static <T> GraphFlux<T> of(String nodeId, String key, Flux<T> flux) {
-        return new GraphFlux<>(nodeId, flux,key, null,null);
+        return new GraphFlux<>(nodeId, flux, key, null, null);
     }
 
     /**
@@ -97,13 +98,12 @@ public class GraphFlux<T> {
      * @param <T>       type of streaming data
      * @return GraphFlux instance
      */
-    public static <T> GraphFlux<T> of(String nodeId, String key, Flux<T> flux, Function<T, ?> mapResult, Function<T, String> chunkResult) {
-
-        return new GraphFlux<>(nodeId, flux, key, mapResult, 
-            chunkResult != null ? o -> chunkResult.apply((T) o) : null);
+    public static <T> GraphFlux<T> of(String nodeId, String key, Flux<T> flux, Function<T, ?> mapResult,
+            Function<T, String> chunkResult) {
+        return new GraphFlux<>(nodeId, flux, key, mapResult, chunkResult);
     }
 
-    public Function<Object,String> getChunkResult() {
+    public Function<T, String> getChunkResult() {
         return chunkResult;
     }
 
@@ -134,7 +134,7 @@ public class GraphFlux<T> {
      *
      * @return result mapping function, may be null
      */
-    public Function getMapResult() {
+    public Function<T, ?> getMapResult() {
         return mapResult;
     }
 
