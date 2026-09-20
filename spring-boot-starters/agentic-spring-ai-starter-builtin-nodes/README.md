@@ -92,3 +92,54 @@ DocumentExtractorNode node = DocumentExtractorNode.builder()
 
 `HttpNode` applies URI and resolved-address preflight checks even with a custom `WebClient`. A custom
 client connector must enforce the same policy during connect-time DNS resolution to prevent rebinding.
+
+## AgentNode
+
+`AgentNode` performs one blocking model call through a `ChatClient`, optionally with tools
+attached, and writes the returned content to `outputKey` (default `agent_output`). It does
+not implement an agent loop of its own; multi-step tool calling is Spring AI's tool-calling
+loop inside `ChatClient.call()`.
+
+At least one of `systemPrompt` and `userPrompt` is required. Both are rendered as
+`PromptTemplate`s against the current state, so they may contain `{variable}` placeholders.
+
+### Retries
+
+```java
+AgentNode node = AgentNode.builder()
+    .chatClient(chatClient)
+    .userPrompt("Summarise {document}")
+    .maxRetries(2) // one attempt plus two retries, i.e. up to three model invocations
+    .outputKey("summary")
+    .build();
+```
+
+`maxRetries` is the retry count, not the total attempt count: `n` allows up to `n + 1` model
+invocations. It defaults to `1`, so the default configuration calls the model twice before
+giving up. The older `maxIterations` name is deprecated; it never controlled agent
+iterations and has always been the same retry count.
+
+### Model Call Error Handling
+
+By default a model call that keeps failing is logged and the node writes an empty string to
+`outputKey`, which downstream nodes cannot distinguish from an empty model response. To
+propagate the failure instead, opt in:
+
+```java
+AgentNode node = AgentNode.builder()
+    .chatClient(chatClient)
+    .userPrompt("Summarise {document}")
+    .throwOnModelError(true)
+    .build();
+```
+
+`throwOnModelError` defaults to `false` for backward compatibility. When enabled, the
+exception raised once the retries are exhausted is propagated with its cause chain intact.
+
+### Strategy
+
+`Strategy.REACT` (the default) and `Strategy.TOOL_CALLING` take the same code path at
+execution time. They differ only in how tool callbacks are prepared at construction time:
+`TOOL_CALLING` wraps every callback so that `ToolMetadata.returnDirect()` is `true`, which
+returns the first tool result to the caller without a follow-up model call. `REACT` leaves
+the callbacks untouched, so tool results are fed back to the model.
