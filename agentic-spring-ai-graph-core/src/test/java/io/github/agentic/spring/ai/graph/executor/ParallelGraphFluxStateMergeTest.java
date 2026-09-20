@@ -34,6 +34,7 @@ import reactor.core.publisher.Flux;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
@@ -127,6 +128,49 @@ public class ParallelGraphFluxStateMergeTest {
 				() -> assertEquals(List.of("chunk-first", "chunk-last"), chunkValues),
 				() -> assertEquals("mapped-last", finalState.value("mapped_result", "")),
 				() -> assertEquals("mapped-last", finalState.value("seen_chunk", "")));
+	}
+
+	@Test
+	void graphFluxCallbackAccessorsRetainElementType() {
+		GraphFlux<String> graphFlux = GraphFlux.of("stream", "result", Flux.just("value"),
+				value -> Map.of("result", value.length()), String::toUpperCase);
+
+		Function<String, ?> resultMapper = graphFlux.getMapResult();
+		Function<String, String> chunkMapper = graphFlux.getChunkResult();
+
+		assertAll(
+				() -> assertEquals(Map.of("result", 5), resultMapper.apply("value")),
+				() -> assertEquals("VALUE", chunkMapper.apply("value")));
+	}
+
+	@Test
+	void parallelGraphFluxPreservesTypedCallbacksWhenAssigningNodeIds() throws Exception {
+		StateGraph stateGraph = new StateGraph(() -> {
+			Map<String, KeyStrategy> strategies = new HashMap<>();
+			strategies.put("left_result", new ReplaceStrategy());
+			strategies.put("right_result", new ReplaceStrategy());
+			strategies.put("joined", new ReplaceStrategy());
+			return strategies;
+		}).addNode("left", node_async(state -> Map.of("left_stream",
+				GraphFlux.of(null, "left_result", Flux.just("left"),
+						value -> Map.of("left_result", value.length()), String::toUpperCase))))
+			.addNode("right", node_async(state -> Map.of("right_stream",
+					GraphFlux.of(null, "right_result", Flux.just("right"),
+							value -> Map.of("right_result", value.length()), String::toUpperCase))))
+			.addNode("join", node_async(state -> Map.of("joined",
+					state.value("left_result", 0) + state.value("right_result", 0))))
+			.addEdge(START, "left")
+			.addEdge(START, "right")
+			.addEdge("left", "join")
+			.addEdge("right", "join")
+			.addEdge("join", END);
+
+		OverAllState finalState = stateGraph.compile().invoke(Map.of()).orElseThrow();
+
+		assertAll(
+				() -> assertEquals(4, finalState.value("left_result", 0)),
+				() -> assertEquals(5, finalState.value("right_result", 0)),
+				() -> assertEquals(9, finalState.value("joined", 0)));
 	}
 
 	@Test
