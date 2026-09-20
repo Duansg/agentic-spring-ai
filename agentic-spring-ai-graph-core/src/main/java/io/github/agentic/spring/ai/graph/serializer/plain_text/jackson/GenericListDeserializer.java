@@ -79,7 +79,7 @@ class GenericListDeserializer extends StdDeserializer<List<Object>> implements C
 
 		final ArrayNode node = (ArrayNode) jsonNode;
 		final List<Object> result = new LinkedList<>();
-		final ObjectMapper typedMapper = hasTypedElement() ? mapperWithoutDefaultTyping(mapper) : null;
+		final ObjectMapper typedMapper = hasTypedElement() ? typeMapper.mapperWithoutDefaultTyping(mapper) : null;
 
 		for (JsonNode valueNode : node) {
 			result.add(deserializeElement(valueNode, mapper, typedMapper));
@@ -107,13 +107,6 @@ class GenericListDeserializer extends StdDeserializer<List<Object>> implements C
 
 	private boolean hasTypedElement() {
 		return elementType != null && !elementType.hasRawClass(Object.class);
-	}
-
-	private ObjectMapper mapperWithoutDefaultTyping(ObjectMapper mapper) {
-		ObjectMapper typedMapper = mapper.copy();
-		typedMapper.setDefaultTyping(null);
-		typedMapper.deactivateDefaultTyping();
-		return typedMapper;
 	}
 
 }

@@ -149,9 +149,7 @@ public interface JacksonDeserializer<T> {
 		}
 
 		// Prepare ObjectMapper without default typing
-		ObjectMapper mapperNoTyping = objectMapper.copy();
-		mapperNoTyping.setDefaultTyping(null);
-		mapperNoTyping.deactivateDefaultTyping();
+		ObjectMapper mapperNoTyping = typeMapper.mapperWithoutDefaultTyping(objectMapper);
 
 		// Check cached strategy
 		DeserializationStrategy cachedStrategy = STRATEGY_CACHE.get(targetClass);
@@ -469,9 +467,7 @@ public interface JacksonDeserializer<T> {
 				}
 				if (element != null && !componentType.isInstance(element)) {
 					// Type mismatch, fall back to generic Object array
-					ObjectMapper mapperNoTyping = objectMapper.copy();
-					mapperNoTyping.setDefaultTyping(null);
-					mapperNoTyping.deactivateDefaultTyping();
+					ObjectMapper mapperNoTyping = typeMapper.mapperWithoutDefaultTyping(objectMapper);
 					return payload.traverse(mapperNoTyping).readValueAs(Object[].class);
 				}
 				Array.set(typedArray, i, element);

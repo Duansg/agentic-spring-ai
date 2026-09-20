@@ -22,12 +22,56 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationConfig;
+import com.fasterxml.jackson.databind.deser.DeserializerFactory;
+import com.fasterxml.jackson.databind.ser.SerializerFactory;
 
 public class TypeMapper {
 
 	public static String TYPE_PROPERTY = "@type";
 
 	private final Set<Reference<?>> references = new HashSet<>();
+
+	private volatile UntypedMapper untypedMapper;
+
+	/**
+	 * Reuses the mapper and its deserializer caches after explicit type markers have
+	 * been resolved. The cache belongs to this serializer, not to a global registry.
+	 */
+	ObjectMapper mapperWithoutDefaultTyping(ObjectMapper mapper) {
+		if (mapper.getDeserializationConfig().getDefaultTyper(null) == null) {
+			return mapper;
+		}
+		UntypedMapper cached = untypedMapper;
+		if (cached != null && cached.matches(mapper)) {
+			return cached.copy();
+		}
+		synchronized (this) {
+			cached = untypedMapper;
+			if (cached == null || !cached.matches(mapper)) {
+				cached = new UntypedMapper(mapper, mapper.getSerializationConfig(), mapper.getDeserializationConfig(),
+						mapper.getSerializerFactory(), mapper.getDeserializationContext().getFactory(),
+						mapper.copy().deactivateDefaultTyping());
+				untypedMapper = cached;
+			}
+			return cached.copy();
+		}
+	}
+
+	private record UntypedMapper(ObjectMapper source, SerializationConfig serializationConfig,
+			DeserializationConfig deserializationConfig, SerializerFactory serializerFactory,
+			DeserializerFactory deserializerFactory, ObjectMapper copy) {
+
+		boolean matches(ObjectMapper mapper) {
+			return source == mapper && serializationConfig == mapper.getSerializationConfig()
+					&& deserializationConfig == mapper.getDeserializationConfig()
+					&& serializerFactory == mapper.getSerializerFactory()
+					&& deserializerFactory == mapper.getDeserializationContext().getFactory();
+		}
+
+	}
 
 	public <T> TypeMapper register(Reference<T> reference) {
 		Objects.requireNonNull(reference, "reference cannot be null");
